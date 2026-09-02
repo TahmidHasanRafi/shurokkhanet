@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShurokkhaNet — consortium fraud interdiction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7EBEF; --surface:#FFFFFF; --sunk:#DDE3E9;
+  --ink:#10151B; --ink-2:#4A5563; --ink-3:#77828F;
+  --line:#C3CCD6; --line-2:#D7DEE5;
+  --clear:#006A4E;              /* released / no hold */
+  --t1:#B4690E; --t2:#C2410C; --t3:#7B1D1D;   /* the hold ramp */
+  --instrument:#1F4B99;         /* measurement, never status */
+  --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--instrument)}
+h1,h2,h3{font-family:var(--cond);font-weight:600;letter-spacing:-0.01em;margin:0}
+.mono{font-family:var(--mono);font-size:.82em;letter-spacing:-0.02em}
+
+/* ---- chrome ---- */
+header{border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:20}
+.bar{max-width:1180px;margin:0 auto;padding:14px 22px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.brand{font-family:var(--cond);font-weight:700;font-size:19px;letter-spacing:-0.02em}
+.brand span{color:var(--ink-3);font-weight:500}
+.seatpick{display:flex;gap:0;margin-left:auto;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seatpick button{font:600 12.5px/1 var(--cond);letter-spacing:.04em;text-transform:uppercase;
+  padding:9px 14px;background:var(--surface);border:0;border-right:1px solid var(--line-2);color:var(--ink-2);cursor:pointer}
+.seatpick button:last-child{border-right:0}
+.seatpick button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.seatpick button:focus-visible{outline:2px solid var(--instrument);outline-offset:-2px}
+
+nav{max-width:1180px;margin:0 auto;padding:0 22px;display:flex;gap:2px;flex-wrap:wrap}
+nav button{font:600 12.5px/1 var(--cond);letter-spacing:.06em;text-transform:uppercase;padding:12px 14px;
+  background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-3);cursor:pointer}
+nav button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--ink)}
+nav button:focus-visible{outline:2px solid var(--instrument);outline-offset:-2px}
+
+main{max-width:1180px;margin:0 auto;padding:26px 22px 80px}
+.banner{background:#3B2A05;color:#F5E3B8;font:500 13px/1.45 var(--sans);padding:10px 22px;border-bottom:1px solid #5a4210}
+.banner b{font-weight:600;color:#fff}
+
+/* ---- layout ---- */
+.grid{display:grid;gap:18px}
+@media(min-width:900px){.grid.two{grid-template-columns:minmax(0,380px) minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px}
+.card h2{font-size:16px;margin-bottom:3px}
+.eyebrow{font:600 11px/1 var(--cond);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px;display:block}
+.sub{color:var(--ink-2);font-size:13.5px;margin:0 0 16px}
+
+label{display:block;font:500 12px/1 var(--cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 5px}
+input,select,textarea{width:100%;font:400 14px var(--sans);padding:9px 10px;border:1px solid var(--line);
+  border-radius:3px;background:var(--surface);color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--instrument);outline-offset:-1px;border-color:var(--instrument)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+button.act{font:600 13px/1 var(--cond);letter-spacing:.06em;text-transform:uppercase;padding:11px 16px;
+  background:var(--ink);color:#fff;border:0;border-radius:3px;cursor:pointer;margin-top:18px}
+button.act.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);margin-top:10px}
+button.act:disabled{opacity:.45;cursor:not-allowed}
+button.act:focus-visible{outline:2px solid var(--instrument);outline-offset:2px}
+
+/* ---- signature: the interdiction clock (Equation 1) ---- */
+.clock{background:var(--ink);border-radius:4px;padding:20px 20px 16px;color:#E8EDF2}
+.clock .eyebrow{color:#7E8B99}
+.eq{font-family:var(--mono);font-size:12px;color:#9AA7B4;margin-bottom:16px}
+.eq em{font-style:normal;color:#fff}
+.track{position:relative;height:66px;border-left:1px solid #333C46;border-bottom:1px solid #333C46}
+.seg{position:absolute;top:10px;height:20px;border-radius:2px;transition:width .45s cubic-bezier(.2,.7,.3,1),left .45s}
+.seg.tr{background:#4A5563}.seg.tp{background:var(--instrument)}.seg.ta{background:#0F7A5A}
+.seg span{position:absolute;top:24px;left:0;font:600 10px/1 var(--cond);letter-spacing:.1em;text-transform:uppercase;color:#9AA7B4;white-space:nowrap}
+.cashout{position:absolute;top:0;bottom:0;width:2px;background:var(--t3)}
+.cashout span{position:absolute;top:-2px;left:7px;font:600 10px/1.3 var(--cond);letter-spacing:.08em;text-transform:uppercase;color:#E08A8A;white-space:nowrap}
+.verdict{margin-top:14px;font-family:var(--cond);font-weight:600;font-size:15px}
+.verdict.win{color:#4ADE9B}.verdict.lose{color:#F09A9A}
+.measured{margin-top:6px;font-family:var(--mono);font-size:11.5px;color:#8A97A4}
+
+/* ---- records ---- */
+.rec{border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:14px 16px;margin-bottom:10px}
+.rec header{position:static;border:0;background:none;padding:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.tier{font:700 11px/1 var(--cond);letter-spacing:.1em;padding:5px 8px;border-radius:2px;color:#fff}
+.tier.T1{background:var(--t1)}.tier.T2{background:var(--t2)}.tier.T3{background:var(--t3)}
+.status{font:600 11px/1 var(--cond);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.status.ACTIVE{color:var(--t2)}.status.EXPIRED{color:var(--ink-3)}.status.REVERSED{color:var(--clear)}
+.kv{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:3px 16px;margin-top:11px;font-size:13px}
+.kv dt{color:var(--ink-3);font:500 11.5px/1.5 var(--cond);letter-spacing:.06em;text-transform:uppercase}
+.kv dd{margin:0;font-family:var(--mono);font-size:12px;word-break:break-all}
+.countdown{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+
+.decision{border-left:4px solid var(--line);padding:14px 16px;background:var(--sunk);border-radius:0 3px 3px 0}
+.decision.block{border-left-color:var(--t2)}
+.decision.allow{border-left-color:var(--clear)}
+.decision strong{font-family:var(--cond);font-size:17px;display:block;margin-bottom:4px}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font:600 11px/1 var(--cond);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+  padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;vertical-align:top}
+tr.flag td{background:#FBF0E6}
+.empty{color:var(--ink-3);font-size:13.5px;padding:18px 0}
+
+.split{display:grid;gap:14px}
+@media(min-width:760px){.split{grid-template-columns:1fr 1fr}}
+.digest{background:var(--sunk);border:1px solid var(--line-2);border-radius:3px;padding:12px;
+  font-family:var(--mono);font-size:11.5px;word-break:break-all;line-height:1.6}
+.result{margin-top:14px;padding:14px;border-radius:3px;font-size:13.5px}
+.result.broken{background:#FBEAEA;border:1px solid #E4B4B4}
+.result.held{background:#E6F2ED;border:1px solid #A9CDBF}
+.result h3{font-size:15px;margin-bottom:5px}
+.err{background:#FBEAEA;border:1px solid #E4B4B4;border-radius:3px;padding:11px 13px;font-size:13.5px;margin-top:14px}
+.note{font-size:12.5px;color:var(--ink-3);margin-top:10px;line-height:1.55}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--ink-3);border-top-color:transparent;
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="banner" id="mockBanner" hidden>
+  <b>Mock mode.</b> No Fabric network is attached. The contract rules are reimplemented in memory so the consoles can be
+  worked on offline. Nothing here is endorsed, ordered or tamper-evident — do not record a demo in this mode.
+</div>
+
+<header>
+  <div class="bar">
+    <div class="brand">ShurokkhaNet <span>/ consortium fraud interdiction</span></div>
+    <div class="seatpick" role="group" aria-label="Acting as">
+      <button data-seat="MFS-A" aria-pressed="true">MFS-A</button>
+      <button data-seat="MFS-B" aria-pressed="false">MFS-B</button>
+      <button data-seat="OVERSIGHT" aria-pressed="false">BFIU</button>
+    </div>
+  </div>
+  <nav>
+    <button data-view="desk" aria-current="page">Fraud desk</button>
+    <button data-view="counter">Cash-out counter</button>
+    <button data-view="oversight">Oversight</button>
+    <button data-view="ledger">Ledger</button>
+    <button data-view="commitments">Commitments</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ FRAUD DESK ============ -->
+<section id="view-desk">
+  <div class="grid two">
+    <div class="card">
+      <span class="eyebrow">assertion-cc · raise</span>
+      <h2>Report stolen money</h2>
+      <p class="sub">The wallet numbers stay in this process. Only keyed commitments, an amount band and an evidence
+        digest reach the ledger.</p>
+
+      <label for="srcWallet">Victim wallet</label>
+      <input id="srcWallet" value="01712000000" inputmode="numeric">
+      <label for="dstWallet">Destination wallet (other provider)</label>
+      <input id="dstWallet" value="01998877665" inputmode="numeric">
+      <div class="row">
+        <div><label for="amount">Amount, Tk</label><input id="amount" value="412500" inputmode="numeric"></div>
+        <div><label for="caseRef">Case reference</label><input id="caseRef" value="CMP-2026-08-4417"></div>
+      </div>
+      <label for="reportGap">Minutes from fraud to victim's call (t<sub>r</sub>)</label>
+      <input id="reportGap" type="number" value="4" min="0" step="1">
+      <label for="victimStatement">Victim statement</label>
+      <textarea id="victimStatement" rows="2">Caller claimed to be provider support and asked for the OTP.</textarea>
+
+      <button class="act" id="raiseBtn">Raise alert</button>
+      <button class="act ghost" id="corroborateBtn" disabled>Corroborate as the other provider</button>
+      <div id="deskErr"></div>
+    </div>
+
+    <div class="grid">
+      <div class="clock">
+        <span class="eyebrow">Equation 1 · the only claim that matters</span>
+        <div class="eq"><em>t<sub>r</sub></em> + <em>t<sub>p</sub></em> + <em>t<sub>a</sub></em> &lt; <em>t<sub>c</sub></em>
+          &nbsp;— report, propagate, act, all before the cash-out completes</div>
+        <div class="track" id="track">
+          <div class="seg tr" id="segTr" style="left:0;width:0"><span>t<sub>r</sub> report</span></div>
+          <div class="seg tp" id="segTp" style="left:0;width:0"><span>t<sub>p</sub> propagate</span></div>
+          <div class="seg ta" id="segTa" style="left:0;width:0"><span>t<sub>a</sub> act</span></div>
+          <div class="cashout" id="cashout" style="left:78%"><span>cash-out<br>t<sub>c</sub></span></div>
+        </div>
+        <div class="verdict" id="verdict">Raise an alert to measure it.</div>
+        <div class="measured" id="measured"></div>
+      </div>
+
+      <div class="card">
+        <span class="eyebrow">shared channel</span>
+        <h2>Alerts on this channel</h2>
+        <p class="sub">Listed here for the demonstration only. Member consoles get no such list — Section 5.2 rules out
+          enumeration, and the counter below can only ask about one wallet at a time.</p>
+        <div id="alertList"><p class="empty">Nothing raised yet.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COUNTER ============ -->
+<section id="view-counter" hidden>
+  <div class="grid two">
+    <div class="card">
+      <span class="eyebrow">assertion-cc · check</span>
+      <h2>Cash-out counter</h2>
+      <p class="sub">An agent is about to hand over cash. The destination provider asks the ledger about this one wallet.
+        The question is written to <span class="mono">audit-cc</span> before it is answered.</p>
+      <label for="checkWallet">Wallet presenting for cash-out</label>
+      <input id="checkWallet" value="01998877665" inputmode="numeric">
+      <label for="checkPurpose">Stated purpose</label>
+      <input id="checkPurpose" value="cash-out authorisation, agent 118842">
+      <button class="act" id="checkBtn">Check before paying</button>
+      <button class="act ghost" id="fishBtn">Run 25 lookups in a burst</button>
+      <p class="note">The burst is the misuse case: a member sweeping the ledger to learn a rival's flagged customers.
+        It is not blocked at the contract. It is recorded, counted against the per-member budget, and chargeable under
+        the service levels.</p>
+      <div id="counterErr"></div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <span class="eyebrow">decision</span>
+        <h2 id="checkHeadline">No check run yet</h2>
+        <div id="checkResult"></div>
+      </div>
+      <div class="card">
+        <span class="eyebrow">audit-cc · lookup log</span>
+        <h2>Who asked what</h2>
+        <div id="lookupLog"><p class="empty">No lookups recorded.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OVERSIGHT ============ -->
+<section id="view-oversight" hidden>
+  <div class="grid two">
+    <div class="card">
+      <span class="eyebrow">assertion-cc · tier 3</span>
+      <h2>Endorse and escalate</h2>
+      <p class="sub">Tier 3 needs BFIU endorsement or a filed police complaint, and a case file already in the
+        collection. Switch the seat above to BFIU before trying — a provider will be refused, which is the point.</p>
+      <label for="t3Id">Assertion id</label>
+      <input id="t3Id" placeholder="paste from the fraud desk" class="mono">
+      <label for="t3Basis">Basis</label>
+      <input id="t3Basis" value="BFIU reference 2026/0442; GD filed at Gulshan PS">
+      <button class="act" id="t3Btn">Escalate to Tier 3</button>
+
+      <label for="reverseReason" style="margin-top:26px">Reversal reason</label>
+      <input id="reverseReason" value="Dispute panel: transfer was authorised by the account holder.">
+      <div class="row">
+        <button class="act ghost" id="reverseWrongBtn">Reverse as wrongful hold</button>
+        <button class="act ghost" id="reverseBtn">Reverse, not wrongful</button>
+      </div>
+      <p class="note">Every release writes a reversal entry either way. The wrongful flag applies the tariff to the
+        member that raised the alert, so over-flagging costs that member money and the consortium gets a measured
+        error rate instead of an assumed one.</p>
+      <div id="oversightErr"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <span class="eyebrow">private data collection · break glass</span>
+        <h2>Emergency access</h2>
+        <p class="sub">Reaching a two-party case file needs two named approvers, a stated purpose and a bounded window.
+          The record is written to the shared channel first, so every member sees the attempt whether or not the read
+          succeeds.</p>
+        <label for="bgId">Assertion id</label>
+        <input id="bgId" placeholder="assertion id" class="mono">
+        <div class="row">
+          <div><label for="bgA1">Approver 1</label><input id="bgA1" value="Dep. Dir. Rahman, BFIU"></div>
+          <div><label for="bgA2">Approver 2</label><input id="bgA2" value="Jt. Dir. Chowdhury, BFIU"></div>
+        </div>
+        <label for="bgPurpose">Purpose</label>
+        <input id="bgPurpose" value="Mule chain investigation MLA-2026-118">
+        <button class="act" id="bgBtn">Open the case file</button>
+        <div id="bgResult"></div>
+      </div>
+      <div class="card">
+        <span class="eyebrow">audit-cc · break-glass log</span>
+        <h2>The regulator, under observation</h2>
+        <div id="bgLog"><p class="empty">No emergency access recorded.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LEDGER ============ -->
+<section id="view-ledger" hidden>
+  <div class="grid two">
+    <div class="card">
+      <span class="eyebrow">collection hash</span>
+      <h2>Present, with the contents absent</h2>
+      <p class="sub">Any member can confirm the case file behind an alert has not changed, without being able to read
+        it. Try it from a seat that is in the collection and one that is not.</p>
+      <label for="verifyId">Assertion id</label>
+      <input id="verifyId" placeholder="assertion id" class="mono">
+      <div class="row">
+        <button class="act" id="verifyBtn">Verify the hash</button>
+        <button class="act ghost" id="readBtn">Read the contents</button>
+      </div>
+      <div id="verifyResult"></div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">chaincode events</span>
+      <h2>What crossed the channel</h2>
+      <p class="sub">Read by the destination provider's listener. The arrival time on this feed is the honest end of
+        t<sub>p</sub>: the first moment the other institution could have acted.</p>
+      <div id="eventFeed"><p class="empty">No events yet.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMMITMENTS ============ -->
+<section id="view-commitments" hidden>
+  <div class="card">
+    <span class="eyebrow">Section 5.1 · Equation 2</span>
+    <h2>Why hashing a phone number does not protect it</h2>
+    <p class="sub">Eleven digits behind seven fixed operator prefixes. The candidate space is about 7&times;10<sup>8</sup>,
+      so a published SHA-256 of a mobile number is the same as publishing the number. The keyed commitment in
+      Equation 3 is the same identifier under a key the ledger never sees.</p>
+
+    <label for="demoNumber">Number to protect</label>
+    <div class="row">
+      <input id="demoNumber" value="01712000000" inputmode="numeric">
+      <button class="act ghost" id="targetsBtn" style="margin-top:0;flex:0 0 auto">Compute both</button>
+    </div>
+
+    <div class="split" style="margin-top:18px">
+      <div>
+        <span class="eyebrow">plain SHA-256 — the naive design</span>
+        <div class="digest" id="nakedDigest">—</div>
+        <button class="act" id="crackNakedBtn" disabled>Attack it</button>
+        <div id="nakedResult"></div>
+      </div>
+      <div>
+        <span class="eyebrow">HMAC-SHA256(k<sub>e</sub>, m ‖ d) — Equation 3</span>
+        <div class="digest" id="keyedDigest">—</div>
+        <button class="act" id="crackKeyedBtn" disabled>Attack it the same way</button>
+        <div id="keyedResult"></div>
+      </div>
+    </div>
+    <p class="note">Both runs use the same code, the same search space and a measured rate on this machine. Node is
+      roughly three orders of magnitude slower than the single graphics card Equation 2 assumes, so the console reports
+      the measured rate and the extrapolation separately rather than quietly rescaling the claim.</p>
+  </div>
+</section>
+
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+let seat = 'MFS-A';
+let lastId = null;
+let lastRaisedAt = null;
+
+// ---------- transport ----------
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json', 'x-seat': seat },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+  return data;
+}
+const showErr = (el, e) => { $(el).innerHTML = `<div class="err">${escape(e.message)}</div>`; };
+const clearErr = (el) => { $(el).innerHTML = ''; };
+const escape = (s) => String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+const short = (s, n = 20) => (s && s.length > n ? s.slice(0, n) + '…' : (s || '—'));
+
+// ---------- chrome ----------
+document.querySelectorAll('.seatpick button').forEach((b) => b.addEventListener('click', () => {
+  seat = b.dataset.seat;
+  document.querySelectorAll('.seatpick button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  refresh();
+}));
+document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach((x) => x.removeAttribute('aria-current'));
+  b.setAttribute('aria-current', 'page');
+  for (const v of ['desk', 'counter', 'oversight', 'ledger', 'commitments']) {
+    $(`view-${v}`).hidden = v !== b.dataset.view;
+  }
+  refresh();
+}));
+
+// ---------- the interdiction clock ----------
+// t_c is the one quantity we do not measure. Section 4.7 says so, and the
+// pilot's first six weeks exist to find its distribution. Here it is an
+// explicit, adjustable assumption, drawn as a wall, not smuggled in.
+const CASH_OUT_SECONDS = 300;
+
+function drawClock({ trSec, tpMs, taMs }) {
+  const scale = CASH_OUT_SECONDS / 0.78;              // cash-out wall sits at 78%
+  const pct = (s) => Math.min((s / scale) * 100, 100);
+  const trW = pct(trSec);
+  const tpW = Math.max(pct(tpMs / 1000), 0.6);
+  const taW = Math.max(pct(taMs / 1000), 0.6);
+
+  $('segTr').style.width = trW + '%';
+  $('segTp').style.left = trW + '%'; $('segTp').style.width = tpW + '%';
+  $('segTa').style.left = (trW + tpW) + '%'; $('segTa').style.width = taW + '%';
+
+  const total = trSec + tpMs / 1000 + taMs / 1000;
+  const win = total < CASH_OUT_SECONDS;
+  $('verdict').className = 'verdict ' + (win ? 'win' : 'lose');
+  $('verdict').textContent = win
+    ? `Hold applied with ${(CASH_OUT_SECONDS - total).toFixed(1)} s to spare.`
+    : `Money left the network ${(total - CASH_OUT_SECONDS).toFixed(1)} s before the hold landed.`;
+  $('measured').innerHTML =
+    `t<sub>r</sub> ${trSec.toFixed(0)} s (entered) &nbsp;·&nbsp; t<sub>p</sub> ${tpMs} ms (measured) ` +
+    `&nbsp;·&nbsp; t<sub>a</sub> ${taMs} ms (measured) &nbsp;·&nbsp; t<sub>c</sub> ${CASH_OUT_SECONDS} s (assumed — Section 4.7)`;
+}
+
+// ---------- fraud desk ----------
+$('raiseBtn').addEventListener('click', async () => {
+  clearErr('deskErr');
+  const btn = $('raiseBtn'); btn.disabled = true; btn.textContent = 'Signing…';
+  try {
+    const gapMin = Number($('reportGap').value || 0);
+    const out = await api('POST', '/api/alerts', {
+      srcWallet: $('srcWallet').value.trim(),
+      dstWallet: $('dstWallet').value.trim(),
+      amount: Number($('amount').value || 0),
+      caseRef: $('caseRef').value.trim(),
+      victimStatement: $('victimStatement').value.trim(),
+      fraudAt: Math.floor(Date.now() / 1000) - gapMin * 60,
+    });
+    lastId = out.assertionId; lastRaisedAt = out.raisedAt;
+    $('t3Id').value = lastId; $('bgId').value = lastId; $('verifyId').value = lastId;
+    $('corroborateBtn').disabled = false;
+
+    // Give the listener a moment to report, then measure.
+    setTimeout(async () => {
+      const a = await api('GET', `/api/alerts/${lastId}`);
+      drawClock({ trSec: gapMin * 60, tpMs: a.propagationMs ?? out.commitMs, taMs: out.endorseMs });
+      refresh();
+    }, 700);
+  } catch (e) { showErr('deskErr', e); }
+  finally { btn.disabled = false; btn.textContent = 'Raise alert'; }
+});
+
+$('corroborateBtn').addEventListener('click', async () => {
+  clearErr('deskErr');
+  try {
+    await api('POST', `/api/alerts/${lastId}/corroborate`, {});
+    refresh();
+  } catch (e) { showErr('deskErr', e); }
+});
+
+function renderAlerts(list) {
+  if (!list.length) return '<p class="empty">Nothing raised yet.</p>';
+  return list.map((a) => {
+    const left = a.expiresAt - Math.floor(Date.now() / 1000);
+    const hh = Math.max(0, Math.floor(left / 3600)), mm = Math.max(0, Math.floor((left % 3600) / 60));
+    return `<div class="rec">
+      <header>
+        <span class="tier ${a.tier}">${a.tier}</span>
+        <span class="status ${a.status}">${a.status}</span>
+        <span class="countdown">${a.status === 'ACTIVE' ? `releases in ${hh}h ${mm}m` : 'released'}</span>
+        <span class="countdown" style="margin-left:auto">${a.assertingOrg}</span>
+      </header>
+      <dl class="kv">
+        <dt>Assertion</dt><dd>${escape(a.assertionId)}</dd>
+        <dt>Destination</dt><dd>${escape(short(a.dstCommit, 32))}</dd>
+        <dt>Amount</dt><dd>${escape(a.amountBand)}</dd>
+        <dt>Evidence</dt><dd>${escape(short(a.evidenceDigest, 32))}</dd>
+        <dt>Collection</dt><dd>${a.collectionHash ? escape(short(a.collectionHash, 32)) : 'none'}</dd>
+        <dt>Corroborated by</dt><dd>${escape((a.corroborations || []).join(', '))}</dd>
+        <dt>Rule version</dt><dd>${escape(a.ruleVersion)}</dd>
+        ${a.propagationMs ? `<dt>Propagation</dt><dd>${a.propagationMs} ms</dd>` : ''}
+      </dl></div>`;
+  }).join('');
+}
+
+// ---------- counter ----------
+$('checkBtn').addEventListener('click', async () => {
+  clearErr('counterErr');
+  try {
+    const r = await api('POST', '/api/check', {
+      wallet: $('checkWallet').value.trim(),
+      purpose: $('checkPurpose').value.trim(),
+    });
+    const blocked = r.decision.cashOut === 'BLOCK';
+    $('checkHeadline').textContent = blocked ? 'Cash-out refused' : 'Cash-out allowed';
+    $('checkResult').innerHTML = `
+      <div class="decision ${blocked ? 'block' : 'allow'}">
+        <strong>${blocked ? 'Do not pay out' : 'Pay out'}</strong>
+        ${escape(r.decision.note)}
+      </div>
+      <dl class="kv">
+        <dt>Commitment asked</dt><dd>${escape(short(r.commitment, 40))}</dd>
+        <dt>Active holds</dt><dd>${r.assertions.length}</dd>
+        <dt>Highest tier</dt><dd>${r.tier || 'none'}</dd>
+        <dt>Transfers</dt><dd>${r.decision.transfer}</dd>
+        <dt>Round trip</dt><dd>${r.lookupMs} ms</dd>
+        <dt>Lookups this minute</dt><dd>${r.audit?.windowCount ?? '—'}${r.audit?.overBudget ? ' — over budget' : ''}</dd>
+      </dl>`;
+    refresh();
+  } catch (e) { showErr('counterErr', e); }
+});
+
+$('fishBtn').addEventListener('click', async () => {
+  clearErr('counterErr');
+  const btn = $('fishBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Sweeping…';
+  try {
+    for (let i = 0; i < 25; i++) {
+      await api('POST', '/api/check', { wallet: `019${String(10000000 + i)}`, purpose: 'bulk screening' });
+    }
+    refresh();
+  } catch (e) { showErr('counterErr', e); }
+  finally { btn.disabled = false; btn.textContent = 'Run 25 lookups in a burst'; }
+});
+
+function renderLookups(rows) {
+  if (!rows.length) return '<p class="empty">No lookups recorded.</p>';
+  const r = rows.slice(-14).reverse();
+  return `<table><thead><tr><th>By</th><th>Target</th><th>Hit</th><th>In window</th><th>Purpose</th></tr></thead><tbody>
+    ${r.map((l) => `<tr class="${l.overBudget ? 'flag' : ''}">
+      <td>${escape(l.byOrg)}</td><td>${escape(short(l.targetHash, 14))}</td>
+      <td>${l.hit ? 'yes' : 'no'}</td><td>${l.windowCount}${l.overBudget ? ' ⚑' : ''}</td>
+      <td>${escape(short(l.purpose, 26))}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="note">Rows marked ⚑ passed the per-member budget. The contract answered anyway; the consortium now has
+    a signed record that it was asked.</p>`;
+}
+
+// ---------- oversight ----------
+$('t3Btn').addEventListener('click', async () => {
+  clearErr('oversightErr');
+  try {
+    await api('POST', `/api/alerts/${$('t3Id').value.trim()}/escalate`, { basis: $('t3Basis').value.trim() });
+    refresh();
+  } catch (e) { showErr('oversightErr', e); }
+});
+const doReverse = async (wrongful) => {
+  clearErr('oversightErr');
+  try {
+    await api('POST', `/api/alerts/${$('t3Id').value.trim()}/reverse`, {
+      reason: $('reverseReason').value.trim(), wrongfulHold: wrongful,
+    });
+    refresh();
+  } catch (e) { showErr('oversightErr', e); }
+};
+$('reverseWrongBtn').addEventListener('click', () => doReverse(true));
+$('reverseBtn').addEventListener('click', () => doReverse(false));
+
+$('bgBtn').addEventListener('click', async () => {
+  $('bgResult').innerHTML = '';
+  try {
+    const r = await api('POST', '/api/breakglass', {
+      assertionId: $('bgId').value.trim(), purpose: $('bgPurpose').value.trim(),
+      approver1: $('bgA1').value.trim(), approver2: $('bgA2').value.trim(), windowSeconds: 900,
+    });
+    $('bgResult').innerHTML = `<div class="result held">
+      <h3>Case file opened</h3>
+      <dl class="kv">
+        <dt>Case ref</dt><dd>${escape(r.caseFile.caseRef)}</dd>
+        <dt>Exact amount</dt><dd>Tk ${escape(String(r.caseFile.exactAmount))}</dd>
+        <dt>Source wallet</dt><dd>${escape(r.caseFile.srcWallet)}</dd>
+        <dt>Destination</dt><dd>${escape(r.caseFile.dstWallet)}</dd>
+        <dt>Window closes</dt><dd>${new Date(r.access.windowTo * 1000).toLocaleTimeString()}</dd>
+      </dl>
+      <p class="note">Those plaintext values were never on the shared channel. They came from the private collection,
+      and the read that produced them is now on the shared channel for every member to see.</p></div>`;
+    refresh();
+  } catch (e) { $('bgResult').innerHTML = `<div class="err">${escape(e.message)}</div>`; }
+});
+
+function renderBreakGlass(rows) {
+  if (!rows.length) return '<p class="empty">No emergency access recorded.</p>';
+  return `<table><thead><tr><th>By</th><th>Assertion</th><th>Approvers</th><th>Purpose</th></tr></thead><tbody>
+    ${rows.slice(-8).reverse().map((b) => `<tr>
+      <td>${escape(b.byOrg)}</td><td>${escape(short(b.assertionId, 14))}</td>
+      <td>${escape(b.approver1)}<br>${escape(b.approver2)}</td>
+      <td>${escape(short(b.purpose, 30))}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- ledger ----------
+$('verifyBtn').addEventListener('click', async () => {
+  try {
+    const r = await api('GET', `/api/case/${$('verifyId').value.trim()}/verify`);
+    $('verifyResult').innerHTML = `<div class="result held"><h3>Hash confirmed</h3>
+      <div class="digest">${escape(r.result)}</div>
+      <p class="note">Seat ${escape(seat)} can prove the case file behind this alert has not changed. Whether it can
+      read the file is a separate question, decided by the collection policy.</p></div>`;
+  } catch (e) { $('verifyResult').innerHTML = `<div class="err">${escape(e.message)}</div>`; }
+});
+$('readBtn').addEventListener('click', async () => {
+  try {
+    const r = await api('GET', `/api/case/${$('verifyId').value.trim()}`);
+    $('verifyResult').innerHTML = `<div class="result held"><h3>Contents readable from ${escape(seat)}</h3>
+      <div class="digest">${escape(JSON.stringify(r.result, null, 1))}</div></div>`;
+  } catch (e) { $('verifyResult').innerHTML = `<div class="err">${escape(e.message)}</div>`; }
+});
+
+function renderEvents(events) {
+  if (!events.length) return '<p class="empty">No events yet.</p>';
+  return `<table><thead><tr><th>Block</th><th>Event</th><th>Subject</th><th>Seen at</th></tr></thead><tbody>
+    ${events.slice(0, 12).map((e) => `<tr>
+      <td>${e.blockNumber}</td><td>${escape(e.name)}</td>
+      <td>${escape(short(e.payload?.assertionId || e.payload?.signalId || '—', 16))}</td>
+      <td>${new Date(e.at).toLocaleTimeString()}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- commitments ----------
+let targets = null;
+$('targetsBtn').addEventListener('click', async () => {
+  const n = $('demoNumber').value.trim();
+  targets = await api('GET', `/api/demo/targets?msisdn=${encodeURIComponent(n)}`);
+  $('nakedDigest').textContent = targets.naked;
+  $('keyedDigest').textContent = targets.keyed;
+  $('crackNakedBtn').disabled = false; $('crackKeyedBtn').disabled = false;
+  $('nakedResult').innerHTML = ''; $('keyedResult').innerHTML = '';
+});
+
+async function runAttack(keyed) {
+  const btn = keyed ? $('crackKeyedBtn') : $('crackNakedBtn');
+  const out = keyed ? $('keyedResult') : $('nakedResult');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Searching…';
+  out.innerHTML = '';
+  try {
+    const r = await api('POST', '/api/demo/crack', {
+      digest: keyed ? targets.keyed : targets.naked,
+      prefix: targets.prefix, keyed, budgetMs: keyed ? 12000 : 90000,
+    });
+    const rate = r.hashesPerSecond.toLocaleString();
+    if (r.found) {
+      out.innerHTML = `<div class="result broken"><h3>Recovered: ${escape(r.number)}</h3>
+        <p>${r.tried.toLocaleString()} candidates in ${(r.ms / 1000).toFixed(1)} s at ${rate} hashes per second.</p>
+        <p class="note">At the ${r.equation2Seconds.toFixed(2)} s Equation 2 assumes for a single graphics card, this is
+        instant. Publishing this digest publishes the number.</p></div>`;
+    } else {
+      out.innerHTML = `<div class="result held"><h3>Nothing recovered</h3>
+        <p>${r.tried.toLocaleString()} candidates in ${(r.ms / 1000).toFixed(1)} s at ${rate} hashes per second, no match.</p>
+        <p class="note">The commitment is not a function of the number alone. Without k<sub>e</sub> the search space is
+        the key, not the eleven digits — and k<sub>e</sub> never reaches a peer.</p></div>`;
+    }
+  } catch (e) { out.innerHTML = `<div class="err">${escape(e.message)}</div>`; }
+  finally { btn.disabled = false; btn.textContent = keyed ? 'Attack it the same way' : 'Attack it'; }
+}
+$('crackNakedBtn').addEventListener('click', () => runAttack(false));
+$('crackKeyedBtn').addEventListener('click', () => runAttack(true));
+
+// ---------- refresh ----------
+async function refresh() {
+  try {
+    const [alerts, lookups, bg, events] = await Promise.all([
+      api('GET', '/api/alerts').catch(() => ({ result: [] })),
+      api('GET', '/api/audit/lookup').catch(() => ({ result: [] })),
+      api('GET', '/api/audit/breakglass').catch(() => ({ result: [] })),
+      api('GET', '/api/events').catch(() => ({ events: [] })),
+    ]);
+    $('alertList').innerHTML = renderAlerts(alerts.result || []);
+    $('lookupLog').innerHTML = renderLookups(lookups.result || []);
+    $('bgLog').innerHTML = renderBreakGlass(bg.result || []);
+    $('eventFeed').innerHTML = renderEvents(events.events || []);
+  } catch { /* the consoles stay usable if a panel fails */ }
+}
+
+const status = await api('GET', '/api/status');
+$('mockBanner').hidden = !status.mock;
+await refresh();
+setInterval(refresh, 6000);
+</script>
+</body>
+</html>
